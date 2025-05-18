@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <style>
+      .container {
+        width: 600px;
+        border-radius: 2em;
+      }
+      .cls-video {
+        width: 100%;
+        border-radius: 2em;
+        border: 1px solid purple;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <video id="video" autoplay playsinline class="cls-video"></video>
+    </div>
+    <br />
+    <br />
+    <img id="preview" alt="Preview" />
+    <script>
+      navigator.mediaDevices
+        .getUserMedia({ video: true })
+        .then((stream) => {
+          const video = document.getElementById("video");
+          video.srcObject = stream;
+        })
+        .catch((err) => {
+          console.error("Error al acceder a la camara: ", err);
+        });
+
+      function captureFrame() {
+        const video = document.getElementById("video");
+        const canvas = document.createElement("canvas");
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(video, 0, 0);
+        return canvas.toDataURL("image/jpeg");
+      }
+
+      async function sendFrameToAPI() {
+        const imageData = captureFrame();
+
+        // console.log(imageData);
+        const response = await fetch("http://localhost:8000/reconocer", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ image: imageData }),
+        });
+        
+        const data = await response.json();
+        console.log("Resultados:", data.results);
+
+        // Mostrar nombres detectados en pantalla
+        const preview = document.getElementById("preview");
+        preview.src = imageData;
+
+        if (data.results && data.results.length > 0) {
+          preview.alt =
+            "Detectado: " + data.results.map((r) => r.name).join(", ");
+        } else {
+          preview.alt = "No se detectaron caras";
+        }
+      }
+
+      // setInterval(sendFrameToAPI, 9000);
+    </script>
+  </body>
+</html>
